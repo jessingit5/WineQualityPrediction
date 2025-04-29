@@ -6,9 +6,10 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.ml.feature.VectorAssembler;
 import org.apache.spark.ml.classification.LogisticRegression;
 import org.apache.spark.ml.classification.LogisticRegressionModel;
+import java.io.IOException; 
 
 public class WineModelTrainer {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException { // ✅ ADD throws IOException
         SparkSession spark = SparkSession.builder()
                 .appName("Wine Quality Trainer")
                 .getOrCreate();
@@ -36,7 +37,7 @@ public class WineModelTrainer {
 
         LogisticRegressionModel model = lr.fit(output);
 
-        model.save("/home/ec2-user/WineQualityPrediction/wine_model");
+        model.save("/home/ec2-user/WineQualityPrediction/wine_model"); // This line can throw IOException
 
         spark.stop();
     }

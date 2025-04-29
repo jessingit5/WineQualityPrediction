@@ -17,7 +17,7 @@ public class WineModelTrainer {
         Dataset<Row> data = spark.read()
                 .option("header", "true")
                 .option("inferSchema", "true")
-                .csv("/home/ec2-user/WineQualityPrediction/TrainingDataset.csv");
+                .csv("file:///home/ec2-user/WineQualityPrediction/TrainingDataset.csv");
 
         String[] featureCols = data.columns();
         String[] inputCols = java.util.Arrays.stream(featureCols)

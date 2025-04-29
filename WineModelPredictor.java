@@ -7,8 +7,10 @@ import org.apache.spark.ml.feature.VectorAssembler;
 import org.apache.spark.ml.classification.LogisticRegressionModel;
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator;
 
+import java.io.IOException;
+
 public class WineModelPredictor {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         if (args.length < 1) {
             System.out.println("Usage: WineModelPredictor <path_to_test_csv>");
             System.exit(1);
@@ -20,13 +22,16 @@ public class WineModelPredictor {
                 .appName("Wine Quality Predictor")
                 .getOrCreate();
 
+        // Load the saved model
         LogisticRegressionModel model = LogisticRegressionModel.load("/home/ec2-user/WineQualityPrediction/wine_model");
 
+        // Load the validation/test data
         Dataset<Row> testData = spark.read()
                 .option("header", "true")
                 .option("inferSchema", "true")
                 .csv(testFilePath);
 
+        // Prepare features
         String[] featureCols = testData.columns();
         String[] inputCols = java.util.Arrays.stream(featureCols)
                 .filter(col -> !col.equals("quality"))
@@ -39,8 +44,10 @@ public class WineModelPredictor {
         Dataset<Row> finalTestData = assembler.transform(testData)
                 .select("features", "quality");
 
+        // Make predictions
         Dataset<Row> predictions = model.transform(finalTestData);
 
+        // Evaluate F1 score
         MulticlassClassificationEvaluator evaluator = new MulticlassClassificationEvaluator()
                 .setLabelCol("quality")
                 .setPredictionCol("prediction")

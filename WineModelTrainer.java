@@ -4,41 +4,46 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.ml.feature.VectorAssembler;
-import org.apache.spark.ml.classification.LogisticRegression;
-import org.apache.spark.ml.classification.LogisticRegressionModel;
-import java.io.IOException; 
+import org.apache.spark.ml.Pipeline;
+import org.apache.spark.ml.PipelineModel;
+import org.apache.spark.ml.regression.LinearRegression;
 
 public class WineModelTrainer {
-    public static void main(String[] args) throws IOException { // ✅ ADD throws IOException
+    public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
                 .appName("Wine Quality Trainer")
                 .getOrCreate();
 
+        String filePath = "file:///home/ec2-user/WineQualityPrediction/TrainingDataset.csv";
+
         Dataset<Row> data = spark.read()
                 .option("header", "true")
                 .option("inferSchema", "true")
-                .csv("file:///home/ec2-user/WineQualityPrediction/TrainingDataset.csv");
+                .csv(filePath);
 
-        String[] featureCols = data.columns();
-        String[] inputCols = java.util.Arrays.stream(featureCols)
-                .filter(col -> !col.equals("quality"))
-                .toArray(String[]::new);
+        data = data.na().drop();
+        System.out.println("Number of rows after dropping nulls: " + data.count());
+
+        String[] featureCols = new String[]{
+            "fixed acidity", "volatile acidity", "citric acid", "residual sugar",
+            "chlorides", "free sulfur dioxide", "total sulfur dioxide",
+            "density", "pH", "sulphates", "alcohol"
+        };
 
         VectorAssembler assembler = new VectorAssembler()
-                .setInputCols(inputCols)
+                .setInputCols(featureCols)
                 .setOutputCol("features");
 
-        Dataset<Row> output = assembler.transform(data)
-                .select("features", "quality");
-
-        LogisticRegression lr = new LogisticRegression()
+        LinearRegression lr = new LinearRegression()
                 .setLabelCol("quality")
                 .setFeaturesCol("features");
 
-        LogisticRegressionModel model = lr.fit(output);
+        Pipeline pipeline = new Pipeline().setStages(new org.apache.spark.ml.PipelineStage[]{assembler, lr});
 
-        model.save("/home/ec2-user/WineQualityPrediction/wine_model"); // This line can throw IOException
+        PipelineModel model = pipeline.fit(data);
+        model.write().overwrite().save("file:///home/ec2-user/WineQualityPrediction/model");
 
+        System.out.println("Model training complete and saved.");
         spark.stop();
     }
 }
